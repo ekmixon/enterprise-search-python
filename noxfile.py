@@ -64,11 +64,12 @@ def tests_impl(session):
     session.install(".[develop]")
     session.run(
         "pytest",
-        "--junitxml=%s" % junit_xml,
+        f"--junitxml={junit_xml}",
         "--cov=elastic_enterprise_search",
         *(session.posargs or ("tests/",)),
-        env={"PYTHONWARNINGS": "always::DeprecationWarning"}
+        env={"PYTHONWARNINGS": "always::DeprecationWarning"},
     )
+
     session.run("coverage", "report", "-m")
 
 

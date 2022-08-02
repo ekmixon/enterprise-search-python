@@ -49,7 +49,7 @@ def run(*argv, expect_exit_code=0):
         os.chdir(tmp_dir)
 
     cmd = " ".join(shlex.quote(x) for x in argv)
-    print("$ " + cmd)
+    print(f"$ {cmd}")
     exit_code = os.system(cmd)
     if exit_code != expect_exit_code:
         print(
@@ -94,7 +94,8 @@ def main():
     with open(version_path) as f:
         version = re.search(
             r"^__version__\s+=\s+[\"\']([^\"\']+)[\"\']", f.read(), re.M
-        ).group(1)
+        )[1]
+
 
     # If we're handed a version from the build manager we
     # should check that the version is correct or write
@@ -110,7 +111,7 @@ def main():
             # If there's no +dev already (as is the case on dev
             # branches like 7.x, master) then we need to add one.
             if not version.endswith("+dev"):
-                version = version + "+dev"
+                version = f"{version}+dev"
             expect_version = expect_version.replace("-SNAPSHOT", "")
             if expect_version.endswith(".x"):
                 expect_version = expect_version[:-2]
@@ -125,8 +126,6 @@ def main():
                 )
                 exit(1)
 
-        # A release that will be tagged, we want
-        # there to be no '+dev', etc.
         elif expect_version != version:
             print(
                 "Version of package (%s) didn't match the "

@@ -105,7 +105,7 @@ class WorkplaceSearch(_WorkplaceSearch):
                 ("redirect_uri", redirect_uri),
             ]
         )
-        return "%s/ws/oauth/authorize?%s" % (base_url, query)
+        return f"{base_url}/ws/oauth/authorize?{query}"
 
     def oauth_exchange_for_access_token(
         self, client_id, client_secret, redirect_uri, code=None, refresh_token=None

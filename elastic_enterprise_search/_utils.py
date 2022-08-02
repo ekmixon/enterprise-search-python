@@ -44,11 +44,7 @@ __all__ = [
 SKIP_IN_PATH = (None, "", b"", [], ())
 PY2 = sys.version_info[0] == 2
 
-if PY2:
-    string_types = (basestring,)  # noqa: F821
-else:
-    string_types = (str, bytes)
-
+string_types = (basestring, ) if PY2 else (str, bytes)
 try:
     import typing
 except ImportError:
@@ -103,9 +99,9 @@ def to_array(value, param=None):
     """Ensures that a parameter is an array"""
     if not isinstance(value, (tuple, list)):
         raise TypeError(
-            "Parameter %smust be a tuple or list"
-            % (repr(param) + " " if param else "",)
+            f'Parameter {f"{repr(param)} " if param else ""}must be a tuple or list'
         )
+
     return value
 
 
@@ -118,13 +114,10 @@ def to_deep_object(param, value):
     def inner(prefix, obj):
         if isinstance(obj, Mapping):
             for key, val in obj.items():
-                for ret in inner("%s[%s]" % (prefix, key), val):
-                    yield ret
-
+                yield from inner(f"{prefix}[{key}]", val)
         elif isinstance(obj, (tuple, list)):
             for item in obj:
-                for ret in inner(prefix + "[]", item):
-                    yield ret
+                yield from inner(f"{prefix}[]", item)
         else:
             yield prefix, to_param(obj)
 
@@ -180,5 +173,5 @@ def default_params_encoder(params):
             val = quote(to_param(val), ",*[]:-")
         to_encode.append((key, val))
     return "&".join(
-        ("%s=%s" % (key, val) if val is not None else key) for key, val in to_encode
+        f"{key}={val}" if val is not None else key for key, val in to_encode
     )

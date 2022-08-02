@@ -42,19 +42,7 @@ class BaseClient(object):
         _transport=None,
         **kwargs
     ):
-        if _transport is not None:
-            if (
-                any(
-                    x is not None
-                    for x in (hosts, http_auth, transport_class, meta_header)
-                )
-                or kwargs
-            ):
-                raise ValueError(
-                    "Can't pass both a Transport via '_transport' and other parameters a client constructor"
-                )
-            self.transport = _transport
-        else:
+        if _transport is None:
             # Default port is 3002 without TLS
             kwargs["default_hosts"] = [
                 {"use_ssl": False, "host": "localhost", "port": 3002}
@@ -68,6 +56,18 @@ class BaseClient(object):
             kwargs.setdefault("serializers", {"application/json": JSONSerializer()})
             self.transport = (transport_class or Transport)(hosts, **kwargs)
 
+        elif (
+                any(
+                    x is not None
+                    for x in (hosts, http_auth, transport_class, meta_header)
+                )
+                or kwargs
+            ):
+            raise ValueError(
+                "Can't pass both a Transport via '_transport' and other parameters a client constructor"
+            )
+        else:
+            self.transport = _transport
         if meta_header is None:
             meta_header = True
 
@@ -92,8 +92,7 @@ class BaseClient(object):
 
     @property
     def http_auth(self):
-        auth_header = self._authorization_header
-        if auth_header:
+        if auth_header := self._authorization_header:
             # We split basic auth into a tuple if we can
             if auth_header.startswith("Basic "):
                 try:
@@ -131,9 +130,8 @@ class BaseClient(object):
             basic_auth = ensure_str(
                 base64.b64encode((b":".join([ensure_binary(x) for x in http_auth])))
             )
-            return "Basic %s" % basic_auth
+            return f"Basic {basic_auth}"
 
-        # If not a tuple/list or string raise an error.
         elif not isinstance(http_auth, str):
             raise TypeError(
                 "'http_auth' must either be a tuple of (username, password) "
@@ -141,9 +139,8 @@ class BaseClient(object):
                 "'Bearer'/token authentication"
             )
 
-        # Bearer / Token auth
         else:
-            return "Bearer %s" % http_auth
+            return f"Bearer {http_auth}"
 
     def perform_request(
         self,
@@ -166,21 +163,18 @@ class BaseClient(object):
         # on the '__elastic_client_meta' parameter and create
         # the 'x-elastic-client-meta' HTTP header if
         # meta_header is set to True.
-        if params:
-            client_meta = tuple(params.pop("__elastic_client_meta", ()))
-        else:
-            client_meta = ()
+        client_meta = tuple(params.pop("__elastic_client_meta", ())) if params else ()
         if self.meta_header:
             client_meta = self._client_meta + client_meta
-            headers["x-elastic-client-meta"] = ",".join(
-                "%s=%s" % (k, v) for k, v in client_meta
-            )
+            headers["x-elastic-client-meta"] = ",".join(f"{k}={v}" for k, v in client_meta)
 
         if self._authorization_header is not None or http_auth is not DEFAULT:
-            if http_auth is not DEFAULT:
-                auth_header = self._parse_http_auth(http_auth)
-            else:
-                auth_header = self._authorization_header
+            auth_header = (
+                self._parse_http_auth(http_auth)
+                if http_auth is not DEFAULT
+                else self._authorization_header
+            )
+
             if auth_header is not None:
                 headers.setdefault("authorization", auth_header)
 

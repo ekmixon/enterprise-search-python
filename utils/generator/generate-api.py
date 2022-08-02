@@ -55,16 +55,16 @@ def is_valid_url(url):
 
 def openapi_type_to_typing(openapi_type, required=True) -> str:
     t = None
-    if openapi_type == "string":
-        t = "str"
+    if openapi_type == "boolean":
+        t = "bool"
     elif openapi_type == "integer":
         t = "int"
     elif openapi_type == "number":
         t = "typing.Union[float, int]"
-    elif openapi_type == "boolean":
-        t = "bool"
+    elif openapi_type == "string":
+        t = "str"
     if t and not required:
-        t = "typing.Optional[%s]" % t
+        t = f"typing.Optional[{t}]"
     return t
 
 
@@ -155,8 +155,7 @@ class Component:
     @property
     def typing_type(self):
         openapi_type = self.spec["type"]
-        t = openapi_type_to_typing(openapi_type)
-        if t:
+        if t := openapi_type_to_typing(openapi_type):
             return t
         elif openapi_type == "array":
             return f"typing.List[{self.properties['items'].typing_type}]"
@@ -234,9 +233,10 @@ class API:
     def docs_url(self) -> Optional[str]:
         url = self.spec.get("externalDocs", {}).get("url", None)
         if url is None:
-            match = re.match(r"\[[^]]+?\]\(([^)]+)\)", self.spec.get("description", ""))
-            if match:
-                url = match.group(1)
+            if match := re.match(
+                r"\[[^]]+?\]\(([^)]+)\)", self.spec.get("description", "")
+            ):
+                url = match[1]
         if url:
             new_url = re.sub(
                 r"/guide/en/([a-z\-]+)/current/",
@@ -293,7 +293,7 @@ class API:
         if ref:
             return re.match(
                 r"^#/?components/(?:schemas|responses|requestBodies)/(.+)$", ref
-            ).group(1)
+            )[1]
 
     @property
     def asciidoc_fragment(self) -> str:
@@ -346,14 +346,11 @@ class OpenAPI:
                 return [expand_refs(i) for i in x]
             elif isinstance(x, dict):
                 if "$ref" in x or ("schema" in x and tuple(x["schema"]) == ("$ref",)):
-                    keys = (
-                        re.match(
-                            r"^#/?(.*)$",
-                            x["$ref"] if "$ref" in x else x["schema"]["$ref"],
-                        )
-                        .group(1)
-                        .split("/")
-                    )
+                    keys = re.match(
+                        r"^#/?(.*)$",
+                        x["$ref"] if "$ref" in x else x["schema"]["$ref"],
+                    )[1].split("/")
+
                     base = schema_data
                     for key in keys:
                         base = base[key]
@@ -397,10 +394,7 @@ class OpenAPI:
 
 
 def main():
-    specs = []
-    for filepath in schemas_dir.iterdir():
-        specs.append(OpenAPI.from_schema(filepath))
-
+    specs = [OpenAPI.from_schema(filepath) for filepath in schemas_dir.iterdir()]
     for spec in specs:
         spec_filepath = (
             base_dir / f"elastic_enterprise_search/client/{spec.namespace}.py"

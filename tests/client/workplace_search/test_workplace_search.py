@@ -51,10 +51,10 @@ def workplace_search(ent_search_url):
 def content_source(workplace_search):
     resp = workplace_search.create_content_source(
         body={
-            "name": "Custom Content Source %s"
-            % ("".join(random.choice(string.ascii_letters) for _ in range(16)))
+            "name": f'Custom Content Source {"".join((random.choice(string.ascii_letters) for _ in range(16)))}'
         }
     )
+
     content_source_id = resp["id"]
     yield content_source_id
     workplace_search.delete_content_source(content_source_id=content_source_id)
@@ -217,7 +217,7 @@ def test_permissions(workplace_search, content_source):
 def test_index_documents_content_source_not_found(vcr_workplace_search):
     with pytest.raises(NotFoundError) as e:
         vcr_workplace_search.index_documents(
-            content_source_id=content_source_id + "a",
+            content_source_id=f"{content_source_id}a",
             documents=[
                 {
                     "id": 1234,
@@ -225,6 +225,7 @@ def test_index_documents_content_source_not_found(vcr_workplace_search):
                 },
             ],
         )
+
     assert e.value.status == 404
     assert e.value.message == ""
 
